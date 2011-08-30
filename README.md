@@ -18,7 +18,7 @@ Plugins
 
 ### survey 
 
-    knife survey \<COOKBOOK COOKBOOK ...\>
+    knife survey <COOKBOOK COOKBOOK ...>
 
 
 
