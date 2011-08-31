@@ -56,9 +56,15 @@ module KnifeAudit
         cookbook_list	= {}
         display_cookbooks.each do |cookbook_name|
           api_endpoint	= env ? "/environments/#{env}/cookbooks/#{cookbook_name}" : "cookbooks/#{cookbook_name}"
-          cookbook_list.merge!(rest.get_rest(api_endpoint))
+          begin
+            cookbook_list.merge!(rest.get_rest(api_endpoint))
+          rescue
+            ui.error("Cookbook #{cookbook_name} could not be found on the server!")
+            exit 1
+          end 
         end 
-      end
+
+     end
 
 #      puts cookbook_list.inspect
 
