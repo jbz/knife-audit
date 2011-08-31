@@ -11,6 +11,12 @@ Installing knife-audit
 
 Copy the knife-audit script from https://github.com/jbz/knife-audit/blob/master/lib/chef/knife/audit.rb to your .chef/plugins/knife directory.
 
+#### Gem install
+
+I'm waiting for rubygems to confirm my account so I can push the gem there.  In the meantime, if you clone the repo, you can build and install a working gem from the main repo directory:
+
+    gem build knife-audit.gemspec
+    gem install ./knife-audit-<version>.gem
 
 Usage
 ---------------
