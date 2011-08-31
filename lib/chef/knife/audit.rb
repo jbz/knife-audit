@@ -38,7 +38,9 @@ module KnifeAudit
 
     def run
 
-      unless @name_args.empty? 
+      if @name_args.empty? 
+        display_cookbooks = {}
+      else
         display_cookbooks = @name_args 
       end
 
@@ -64,9 +66,8 @@ module KnifeAudit
           end 
         end 
 
-     end
+      end
 
-#      puts cookbook_list.inspect
 
       # add count => 0 to each cookbook hash
       cookbook_list.each do |name,book|
@@ -106,13 +107,11 @@ module KnifeAudit
 
       end # step 3 iterate end
 
-      # 4) Output total counts for each cookbook in cookbook list
+      # 4) Output
 
       format_cookbook_audit_list_for_display(cookbook_list).each do |line|
         ui.msg(line)
       end
-
-      # 5) Output complete node/cookbook array
 
     end # 'run' def end
 
