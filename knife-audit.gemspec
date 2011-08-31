@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.version     = Knife::Audit::VERSION
   s.authors     = ["Jacob Zimmerman"]
   s.email       = ["jzimmerman@mdsol.com"]
-  s.homepage    = "https://github.com/mdsol/knife-survey"
+  s.homepage    = "https://github.com/jbz/knife-audit"
   s.summary     = %q{A Chef plugin for determining which cookbooks are in use on which nodes of your Chef server or Opscode organization.}
   s.description = %q{Allows you to safely maintain a chef cookbook set by determining which cookbooks are currently in use by nodes (included in node runlists).}
 

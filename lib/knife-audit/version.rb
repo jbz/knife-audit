@@ -1,5 +1,5 @@
 module Knife
-  module Survey
+  module Audit
     VERSION = "0.0.1"
   end
 end
