@@ -37,7 +37,9 @@ This is my first knife plugin, and I haven't been using Ruby that long.  Plus, I
 License terms
 -------------
 Authors:: J.B. Zimmerman 
+
 Copyright:: Copyright (c) 2009-2011 J.B. Zimmerman
+
 License:: Apache License, Version 2.0
 
 
