@@ -6,8 +6,6 @@ Allows you to safely maintain a chef cookbook set by determining which cookbooks
 
 Installing knife-audit
 -------------------
-Be sure you are running the latest version of Chef.
-
 
 #### Script install
 
@@ -27,13 +25,19 @@ If one or more cookbook names are specified on the command line, knife-audit wil
 
 The '-s' or '--show-nodelist' option will cause knife-audit to include in its output a list of all nodes which reference each cookbook.
 
+**NOTE** knife-audit retrieves an array of *all* nodes present on your chef server for each run.  As a result, it is relatively slow; if you have many ( >= 16) nodes, it will take noticeable wallclock time to complete its run.  In addition. it may use lots of memory to hold those node objects.
+
+
+Disclaimer
+----------
+
+This is my first knife plugin, and I haven't been using Ruby that long.  Plus, I'm an op, not a software engineer. :-)  If you run into problems with knife-audit, by all means let me know; you can find me via the github page or on irc at freenode #chef, usually.  Thanks.
+
 
 License terms
 -------------
 Authors:: J.B. Zimmerman 
-
 Copyright:: Copyright (c) 2009-2011 J.B. Zimmerman
-
 License:: Apache License, Version 2.0
 
 
