@@ -75,18 +75,17 @@ module KnifeSurvey
       Shef::Extensions.extend_context_object(self)
       node_list = nodes.find(query) 
 
-      # using expand!.recipes catches multi-level roles (roles with roles with recipes, etc.)
-      recipes = node_list.first.expand!.recipes.to_a
-      node_cookbook_list = recipes.map{ |x| x.match(/[^\:]+/)[0] }.uniq
-
-      puts node_cookbook_list.inspect
-
       # 3) Iterate over each node
 
-#      node_list.each do |node|
+      node_list.each do |node|
 
         # 3a) Get node's runlist
-#        recipes = node.expand!.recipes
+
+        # using expand!.recipes catches multi-level roles (roles with roles with recipes, etc.)
+        recipes = node.expand!.recipes.to_a
+        node_cookbook_list = recipes.map{ |x| x.match(/[^\:]+/)[0] }.uniq
+
+        puts node_cookbook_list.inspect
         
         # 3b) Add the cookbooks/recipes in node's runlist to the node array's 'runlist' hash
 

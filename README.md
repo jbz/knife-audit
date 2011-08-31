@@ -1,4 +1,4 @@
-knife-survey
+knife-audit
 ========
 A Chef plugin for determining which cookbooks are in use on which nodes of your Chef server or Opscode organization.
 Allows you to safely maintain a chef cookbook set by determining which cookbooks are currently in use by nodes (included in node runlists).
@@ -6,19 +6,19 @@ Allows you to safely maintain a chef cookbook set by determining which cookbooks
 Requirements
 ---------------
 
-Installing knife-survey
+Installing knife-audit
 -------------------
 Be sure you are running the latest version of Chef.
 
-    gem install knife-flow
+    gem install knife-audit
 
 
 Plugins
 ---------------
 
-### survey 
+### audit 
 
-    knife survey <COOKBOOK COOKBOOK ...>
+    knife audit <COOKBOOK COOKBOOK ...>
 
 
 
