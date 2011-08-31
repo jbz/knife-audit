@@ -70,7 +70,7 @@ module KnifeSurvey
 #      node_list		= (env ? Chef::Node.list_by_environment(env) : Chef::Node.list )
 #      output(format_list_for_display(node_list))
 
-      query = "*:*"
+      query = "*:*"  # find all nodes
 
       Shef::Extensions.extend_context_object(self)
       node_list = nodes.find(query) 
