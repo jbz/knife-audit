@@ -25,7 +25,7 @@ knife-audit is available on rubygems.org - if you have that source in your gemrc
 Usage
 ---------------
 
-    knife audit <COOKBOOK COOKBOOK ...>
+    knife audit [-s] <COOKBOOK COOKBOOK ...>
 
 If no cookbooks are specified, knife-audit will return a list of *all* cookbooks available on the currently configured Chef server or Opscode Platform organization, along with a count for each of how many nodes in the current Chef server or Opscode Platform organization explicitly reference that cookbook in their expanded runlist. 
 
