@@ -200,7 +200,7 @@ module KnifeAudit
       key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
       if config[:show_nodelist]
         item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["count"]} [ #{cookbook["nodes"].join('  ')} ]"
+          "#{name.ljust(key_length)} #{cookbook["count"]} [ #{cookbook["nodes"].sort.join('  ')} ]"
         end
       else
         item.sort.map do |name, cookbook|
@@ -214,7 +214,7 @@ module KnifeAudit
       key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
       if config[:show_nodelist]
         item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["seen_recipe_count"]} [ #{cookbook["seen_recipe_nodes"].join('  ')} ]"
+          "#{name.ljust(key_length)} #{cookbook["seen_recipe_count"]} [ #{cookbook["seen_recipe_nodes"].sort.join('  ')} ]"
         end
       else
         item.sort.map do |name, cookbook|
@@ -230,7 +230,7 @@ module KnifeAudit
         item.sort.map do |name, cookbook|
           cookbook_display = (cookbook["seen_recipe_nodes"] + cookbook["nodes"]).uniq
           cookbook_count = cookbook["seen_recipe_count"] + cookbook["count"]
-          "#{name.ljust(key_length)} #{cookbook_count} [ #{cookbook_display.join('  ')} ]"
+          "#{name.ljust(key_length)} #{cookbook_count} [ #{cookbook_display.sort.join('  ')} ]"
         end
       else
         item.sort.map do |name, cookbook|
