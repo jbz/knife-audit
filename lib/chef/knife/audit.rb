@@ -16,21 +16,21 @@
 #
 
 require 'chef/knife'
- 
+
 module KnifeAudit
   class Audit < Chef::Knife
- 
+
     deps do
       require 'chef/cookbook_loader'
       require 'chef/environment'
       require 'chef/node'
       require 'chef/run_list'
-      require 'chef/json_compat' 
-      require 'chef/shef/ext'
+      require 'chef/json_compat'
+      require 'chef/shell/ext'
     end
- 
+
     banner "knife audit <COOKBOOK COOKBOOK ...>"
- 
+
     option :show_nodelist,
       :short => "-s",
       :long => "--show-nodelist",
@@ -53,10 +53,10 @@ module KnifeAudit
 
     def run
 
-      if @name_args.empty? 
+      if @name_args.empty?
         display_cookbooks = {}
       else
-        display_cookbooks = @name_args 
+        display_cookbooks = @name_args
       end
 
       self.config = Chef::Config.merge!(config)
@@ -68,7 +68,7 @@ module KnifeAudit
           ui.msg("No cookbook path set in Chef config, cannot install cookbook.")
           return
         end
-      
+
         source_path = File.dirname(__FILE__) + "/knife_audit_cookbook"
         dest_path = config[:cookbook_path].first + "/knife_audit"
 
@@ -81,12 +81,12 @@ module KnifeAudit
 
         return
       end
-   
+
       # 1) Get a list (hash, actually, with key of 'name') of cookbooks available on the current server/org
       #    unless we've been given a cookbook/cookbooks on the command line
       env		= config[:environment]
       num_versions 	= config[:all_versions] ? "num_versions=all" : "num_versions=1"
-      
+
       if display_cookbooks.empty?
         api_endpoint	= env ? "/environments/#{env}/cookbooks?#{num_versions}" : "/cookbooks?#{num_versions}"
         cookbook_list	= rest.get_rest(api_endpoint)
@@ -99,8 +99,8 @@ module KnifeAudit
           rescue
             ui.error("Cookbook #{cookbook_name} could not be found on the server!")
             exit 1
-          end 
-        end 
+          end
+        end
 
       end
 
@@ -118,8 +118,8 @@ module KnifeAudit
 
       query = "*:*"  # find all nodes
 
-      Shef::Extensions.extend_context_object(self)
-      node_list = nodes.find(query) 
+      Shell::Extensions.extend_context_object(self)
+      node_list = nodes.find(query)
 
       # 3) Iterate over each node
 
@@ -127,16 +127,16 @@ module KnifeAudit
 
         # 3a) Get node's runlist
 
-        # Check to see if we need the seen_recipes total or not; if no, skip.  
-        # If yes use seen_recipes if it's available. If it's not available, fall back 
+        # Check to see if we need the seen_recipes total or not; if no, skip.
+        # If yes use seen_recipes if it's available. If it's not available, fall back
         # to the node.recipes contents.
         if (config[:all_cookbooks] || config[:totals])
           recipes = (node["knife_audit"] && node["knife_audit"]["seen_recipes"].keys) || node.expand!.recipes.to_a
-          if node["knife_audit"] && node["knife_audit"]["seen_recipes"] 
+          if node["knife_audit"] && node["knife_audit"]["seen_recipes"]
             node_seen_recipe_flag = true
           end
         else
-          # If not, use node.recipes. Using expand!.recipes catches multi-level roles 
+          # If not, use node.recipes. Using expand!.recipes catches multi-level roles
           # (roles with roles with recipes, etc.)
           recipes = node.expand!.recipes.to_a
         end
@@ -207,7 +207,7 @@ module KnifeAudit
           "#{name.ljust(key_length)} #{cookbook["count"]}"
         end
       end
-         
+
     end # format_cokbook_runlist... def end
 
     def format_cookbook_seenlist_list_for_display(item)
@@ -221,7 +221,7 @@ module KnifeAudit
           "#{name.ljust(key_length)} #{cookbook["seen_recipe_count"]}"
         end
       end
-         
+
     end # format_cokbook_seenlist... def end
 
     def format_cookbook_totallist_list_for_display(item)
@@ -238,7 +238,7 @@ module KnifeAudit
           "#{name.ljust(key_length)} #{cookbook_count}"
         end
       end
-         
+
     end # format_cokbook_seenlist... def end
 
 
