@@ -9,7 +9,7 @@ Installing knife-audit
 
 #### Script install
 
-Copy the knife-audit script from https://github.com/jbz/knife-audit/blob/master/lib/chef/knife/audit.rb to your .chef/plugins/knife directory.   Note that script-installed knife audit will be unable to install the knife_audit helper cookbook for you.
+Copy the knife-audit script from https://raw.githubusercontent.com/jbz/knife-audit/master/lib/chef/knife/audit.rb to your .chef/plugins/knife directory.   Note that script-installed knife audit will be unable to install the knife_audit helper cookbook for you.
 
 #### Gem install
 
