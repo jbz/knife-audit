@@ -25,8 +25,13 @@
 
 ruby_block "get_seen_recipes" do
   block do
-    runlist = node.run_state[:seen_recipes]
-    node.set["knife_audit"]["seen_recipes"] = runlist
+    if Chef::VERSION >= '11.0.0'
+      runlist = run_context.loaded_recipes
+      node.set["knife_audit"]["seen_recipes"] = runlist
+    else
+      runlist = node.run_state[:seen_recipes]
+      node.set["knife_audit"]["seen_recipes"] = runlist
+    end
   end
   action :create
 end
