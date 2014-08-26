@@ -131,7 +131,7 @@ module KnifeAudit
         # If yes use seen_recipes if it's available. If it's not available, fall back
         # to the node.recipes contents.
         if (config[:all_cookbooks] || config[:totals])
-          recipes = (node["knife_audit"] && node["knife_audit"]["seen_recipes"].keys) || node.expand!.recipes.to_a
+          recipes = (node["knife_audit"] && node["knife_audit"]["seen_recipes"]) || node.expand!.recipes.to_a
           if node["knife_audit"] && node["knife_audit"]["seen_recipes"]
             node_seen_recipe_flag = true
           end
