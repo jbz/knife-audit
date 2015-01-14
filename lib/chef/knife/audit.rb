@@ -51,6 +51,21 @@ module KnifeAudit
       :long => "--install-cookbook",
       :description => "Install knife_audit helper cookbook into current chef cookbook directory"
 
+    option :version_split,
+      :short => "-v",
+      :long => "--version-split",
+      :description => "Split output by cookbook versions"
+    
+    option :env_split,
+      :short => "-e",
+      :long => "--env-split",
+      :description => "Split output by Chef Environment"
+    
+    option :env_select,
+      :short => "-E ENVIRONMENT",
+      :long => "--environment ENVIRONMENT",
+      :description => "Select Environment"
+
     def run
 
       if @name_args.empty?
@@ -147,7 +162,7 @@ module KnifeAudit
         #     add the node to its running node array
 
         node_cookbook_list.each do |cookbook|
-	        if cookbook_list.has_key?(cookbook)
+	  if cookbook_list.has_key?(cookbook)
             # Up the appropriate ookbook count and add node to appropriate nodes array
             if node_seen_recipe_flag
               cookbook_list[cookbook]["seen_recipe_count"] += 1
