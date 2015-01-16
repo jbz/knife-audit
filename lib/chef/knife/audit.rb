@@ -131,7 +131,7 @@ module KnifeAudit
 
       # 2) Get an array of Chef::Nodes known to the current server/org
 
-      query = "*:*"  # find all nodes
+      query = config[:env_select] ? "chef_environment:#{config[:env_select]}" : "*:*"
 
       Shell::Extensions.extend_context_object(self)
       node_list = nodes.find(query)
