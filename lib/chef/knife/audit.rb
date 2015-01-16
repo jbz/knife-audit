@@ -241,7 +241,8 @@ module KnifeAudit
         item.sort.map do |name, cookbook|
           cookbook_display = (cookbook["seen_recipe_nodes"] + cookbook["nodes"]).uniq
           cookbook_count = cookbook["seen_recipe_count"] + cookbook["count"]
-          "#{name.ljust(key_length)} #{cookbook_count} " + wrapi(#{cookbook_display.sort.join('  ')},20,key_length + 5)
+          "#{name.ljust(key_length)} #{cookbook_count}"
+          puts wrapi("#{cookbook_display.sort.join('  ')}",20,key_length + 5)
         end
       else
         item.sort.map do |name, cookbook|
