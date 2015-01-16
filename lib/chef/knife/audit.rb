@@ -61,11 +61,6 @@ module KnifeAudit
       :long => "--env-split",
       :description => "Split output by Chef Environment"
     
-    option :env_select,
-      :short => "-E ENVIRONMENT",
-      :long => "--environment ENVIRONMENT",
-      :description => "Select Environment"
-
     def run
 
       if @name_args.empty?
@@ -76,7 +71,8 @@ module KnifeAudit
 
       self.config = Chef::Config.merge!(config)
 
-      # If :install_cookbook flag is set, just install the cookbook and return (exit).
+      # puts config
+      # if :install_cookbook flag is set, just install the cookbook and return (exit).
       if config[:install_cookbook]
 
         unless config[:cookbook_path]
@@ -131,7 +127,7 @@ module KnifeAudit
 
       # 2) Get an array of Chef::Nodes known to the current server/org
 
-      query = config[:env_select] ? "chef_environment:#{config[:env_select]}" : "*:*"
+      query = config[:environment] ? "chef_environment:#{config[:environment]}" : "*:*"
 
       Shell::Extensions.extend_context_object(self)
       node_list = nodes.find(query)
