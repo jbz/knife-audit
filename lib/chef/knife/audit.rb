@@ -119,27 +119,35 @@ module KnifeAudit
         end
       end
 
-      # set-up count => 0 for each cookbook or recipe
+      # set-up count => 0 for each cookbooks and recipes
+      cookbook_list.each do |name,book|
+        book["count"] = 0
+        book["seen_recipe_count"] = 0
+        book["nodes"] = []
+        book["seen_recipe_nodes"] = []
+      end
+
       if config[:rec_split]
-        all_rec = rest.get_rest("cookbooks/_recipes")
-        all_rec.map!{ |x| x.match(/::/) ? x : x << "::default"}.uniq
+        @all_rec = rest.get_rest("cookbooks/_recipes")
+        @all_rec.map!{ |x| x.match(/::/) ? x : x << "::default"}.uniq
+        #puts all_rec
         cookbook_list.each do |name,book|
-          this_recs = all_rec.each_index.select{ |x| all_rec[x].match(/^\"#{name}\"/)}
-          this_recs.each do |rec|
-            book[rec]["count"] = 0
-            book[rec]["seen_recipe_count"] = 0
-            book[rec]["nodes"] = []
-            book[rec]["seen_recipe_nodes"] = []
+          this_recs = @all_rec.each.select{ |x| x =~ /#{name}/ }
+          this_recs.each do |my_recipe|
+            rec = my_recipe.split('::')
+            #puts "this one -- #{rec[0]} ** #{rec[1]}"
+            book[rec[1]] = {}
+            book[rec[1]]["count"] = 0
+            book[rec[1]]["seen_recipe_count"] = 0
+            book[rec[1]]["nodes"] = []
+            book[rec[1]]["seen_recipe_nodes"] = []
           end
         end
-      else
-        cookbook_list.each do |name,book|
-          book["count"] = 0
-          book["seen_recipe_count"] = 0
-          book["nodes"] = []
-          book["seen_recipe_nodes"] = []
-        end
       end
+
+      #puts 
+      #puts "the full monty"
+      #puts cookbook_list
 
 
       # 2) Get an array of Chef::Nodes known to the current server/org
@@ -182,9 +190,29 @@ module KnifeAudit
         # 3b) For each cookbook in the node runlist, if it's in our cookbook array increment its count and
         #     add the node to its running node array
 
-        node_cookbook_list.each do |cookbook|
-	  if cookbook_list.has_key?(cookbook)
-            # Up the appropriate ookbook count and add node to appropriate nodes array
+        if config[:rec_split]
+          node_cookbook_list.each do | my_rec |
+            cb_rec = my_rec.split('::')
+            #puts cb_rec[0]
+            #puts cb_rec[1]
+  	    if cookbook_list.has_key?(cb_rec[0])
+              # Up the appropriate cookbook count and add node to appropriate nodes array
+              if node_seen_recipe_flag
+                #puts "adding #{cb_rec[1]} from #{cb_rec[0]}"
+                cookbook_list[cb_rec[0]][cb_rec[1]]["seen_recipe_count"] += 1
+                cookbook_list[cb_rec[0]]["seen_recipe_count"] += 1
+                cookbook_list[cb_rec[0]][cb_rec[1]]["seen_recipe_nodes"] << node.name
+              else
+                cookbook_list[cb_rec[0]][cb_rec[1]]["count"] += 1
+                cookbook_list[cb_rec[0]]["count"] += 1
+                cookbook_list[cb_rec[0]][cb_rec[1]]["nodes"] << node.name
+              end
+            end
+          end
+        else
+          node_cookbook_list.each do |cookbook|
+  	  if cookbook_list.has_key?(cookbook)
+            # Up the appropriate cookbook count and add node to appropriate nodes array
             if node_seen_recipe_flag
               cookbook_list[cookbook]["seen_recipe_count"] += 1
               cookbook_list[cookbook]["seen_recipe_nodes"] << node.name
@@ -196,7 +224,8 @@ module KnifeAudit
         end
       node_seen_recipe_flag = false
 
-      end # step 3 iterate end
+     end
+    end # step 3 iterate end
 
       # 4) Output
 
@@ -223,12 +252,11 @@ module KnifeAudit
 
         ui.msg("Cookbook audit totals - runlist-only nodes + seen_recipes:")
 
-        format_cookbook_totallist_list_for_display(cookbook_list).each do |line|
-          ui.msg(line)
-        end
+        format_cookbook_totallist_list_for_display(cookbook_list)
+        #format_cookbook_totallist_list_for_display(cookbook_list).each do |line|
+        #  ui.msg(line)
+        #end
       end
-
-
     end # 'run' def end
 
 
@@ -241,6 +269,13 @@ module KnifeAudit
       else
         item.sort.map do |name, cookbook|
           "#{name.ljust(key_length)} #{cookbook["count"]}"
+          if config[:rec_split]
+            cookbook.map do | recipe, stats|
+              unless recipe == "url" || recipe == "versions"
+                "  #{name}::#{recipe}".ljust(key_length) + " #{cookbook[recipe]["count"]}"
+              end
+            end
+          end
         end
       end
 
@@ -250,18 +285,22 @@ module KnifeAudit
       key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
       if config[:show_nodelist]
         item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["seen_recipe_count"]} [ #{cookbook["seen_recipe_nodes"].sort.join('  ').ljust(key_length)} ]"
+          "#{name.ljust(key_length)} #{cookbook['seen_recipe_count']} [ #{cookbook['seen_recipe_nodes'].sort.join('  ').ljust(key_length)} ]"
         end
       else
         item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["seen_recipe_count"]}"
+          "#{name.ljust(key_length)} #{cookbook['seen_recipe_count']}"
         end
       end
 
     end # format_cokbook_seenlist... def end
 
     def format_cookbook_totallist_list_for_display(item)
-      key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
+      if config[:rec_split]
+        key_length = item.empty? ? 0 : @all_rec.map {|name| name.size }.max + 4
+      else
+        key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
+      end
       if config[:show_nodelist]
         item.sort.map do |name, cookbook|
           cookbook_display = (cookbook["seen_recipe_nodes"] + cookbook["nodes"]).uniq
@@ -272,10 +311,18 @@ module KnifeAudit
       else
         item.sort.map do |name, cookbook|
           cookbook_count = cookbook["seen_recipe_count"] + cookbook["count"]
-          "#{name.ljust(key_length)} #{cookbook_count}"
+          puts "#{name.ljust(key_length)} #{cookbook_count}"
+          if config[:rec_split]
+            cookbook.map do | recipe, stats|
+              unless recipe == "url" || recipe == "versions" || recipe == "count" || recipe == "seen_recipe_count"|| recipe == "nodes"|| recipe == "seen_recipe_nodes"
+                rec_count =  cookbook[recipe]['count'] + cookbook[recipe]['seen_recipe_count']
+                rec_name = "  #{name}::#{recipe}"
+                puts "#{rec_name.ljust(key_length)} #{rec_count}"
+              end
+            end
+          end
         end
       end
-
     end # format_cokbook_seenlist... def end
 
     def wrapi(s, width=78, ind=20)
