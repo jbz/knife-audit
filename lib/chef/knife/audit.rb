@@ -61,6 +61,11 @@ module KnifeAudit
       :long => "--env-split",
       :description => "Split output by Chef Environment"
     
+    option :rec_split,
+      :short => "-r",
+      :long => "--recipe-split",
+      :description => "Split counts by Recipe"
+
     def run
 
       if @name_args.empty?
@@ -112,16 +117,28 @@ module KnifeAudit
             exit 1
           end
         end
-
       end
 
-
-      # add count => 0 to each cookbook hash
-      cookbook_list.each do |name,book|
-        book["count"] = 0
-        book["seen_recipe_count"] = 0
-        book["nodes"] = []
-        book["seen_recipe_nodes"] = []
+      # set-up count => 0 for each cookbook or recipe
+      if config[:rec_split]
+        all_rec = rest.get_rest("cookbooks/_recipes")
+        all_rec.map!{ |x| x.match(/::/) ? x : x << "::default"}.uniq
+        cookbook_list.each do |name,book|
+          this_recs = all_rec.each_index.select{ |x| all_rec[x].match(/^\"#{name}\"/)}
+          this_recs.each do |rec|
+            book[rec]["count"] = 0
+            book[rec]["seen_recipe_count"] = 0
+            book[rec]["nodes"] = []
+            book[rec]["seen_recipe_nodes"] = []
+          end
+        end
+      else
+        cookbook_list.each do |name,book|
+          book["count"] = 0
+          book["seen_recipe_count"] = 0
+          book["nodes"] = []
+          book["seen_recipe_nodes"] = []
+        end
       end
 
 
@@ -152,7 +169,15 @@ module KnifeAudit
           recipes = node.expand!.recipes.to_a
         end
 
-        node_cookbook_list = recipes.map{ |x| x.match(/[^\:]+/)[0] }.uniq
+        if config[:rec_split]
+	  node_cookbook_list = recipes.map{ |x| x.match(/::/) ? x : x << "::default"}.uniq
+        else
+          node_cookbook_list = recipes.map{ |x| x.match(/[^\:]+/)[0] }.uniq
+        end
+       # puts 
+       # puts "#{node["hostname"]}"
+       # puts 
+       # puts node_cookbook_list
 
         # 3b) For each cookbook in the node runlist, if it's in our cookbook array increment its count and
         #     add the node to its running node array
@@ -241,8 +266,8 @@ module KnifeAudit
         item.sort.map do |name, cookbook|
           cookbook_display = (cookbook["seen_recipe_nodes"] + cookbook["nodes"]).uniq
           cookbook_count = cookbook["seen_recipe_count"] + cookbook["count"]
-          "#{name.ljust(key_length)} #{cookbook_count}"
-          puts wrapi("#{cookbook_display.sort.join('  ')}",20,key_length + 5)
+          puts "#{name.ljust(key_length)} #{cookbook_count}"
+          puts wrapi("#{cookbook_display.sort.join(' ')}",125, 4)
         end
       else
         item.sort.map do |name, cookbook|
@@ -255,7 +280,7 @@ module KnifeAudit
 
     def wrapi(s, width=78, ind=20)
       sp=" " * ind
-      s.gsub(/(.{1,#{width}})(\s+|\Z)/, sp + "\\1\n")
+      s.gsub!(/(.{1,#{width}})(\s+|\Z)/, sp + "\\1\n")
     end
   end #class end
 
