@@ -240,7 +240,7 @@ module KnifeAudit
       item.sort.map do |name, cookbook|
         cookbook_count = cookbook["nodes"].count
         ui.msg("#{name.ljust(@key_length)} #{cookbook['count']}")
-        ui.msg(wrapi("#{cookbook['nodes'].sort.join(' ')}",125, 4) if config[:show_nodelist]
+        ui.msg(wrapi("#{cookbook['nodes'].sort.join(' ')}",125, 4)) if config[:show_nodelist]
         if config[:rec_split]
           cookbook.map do | recipe, stats|
             unless @skip_these.include?(recipe)
