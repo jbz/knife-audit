@@ -25,7 +25,7 @@ knife-audit is available on rubygems.org - if you have that source in your gemrc
 Usage
 ---------------
 
-    knife audit [-a|-t] [-s] [-i] <COOKBOOK COOKBOOK ...>
+    knife audit [-a|-t] [-r] [-s] [-E <Environment>] [-i] <COOKBOOK COOKBOOK ...>
 
 If no cookbooks are specified, knife-audit will return a list of *all* cookbooks available on the currently configured Chef server or Opscode Platform organization, along with a count for each of how many nodes in the current Chef server or Opscode Platform organization explicitly reference that cookbook in their expanded runlist. 
 
@@ -38,6 +38,10 @@ The '-a' or '--all-cookbooks' option will cause knife-audit to check on each nod
 The '-t' or '--totals' option will cause knife-audit to present a single output section containing the merged totals of all nodes with and without the helper cookbook.  This is less accurate, but still useful and easier to read.
 
 The '-s' or '--show-nodelist' option will cause knife-audit to include in its output a list of all nodes which reference each cookbook.
+
+The '-E' or '--environment' <ENVIRONMENT> option, like the standard knife option, will cause knife-audit to limit the nodes queried to those in the specified environment.
+
+The '-r' or '--recipe-split' option will cause knife-audit to further split its output by the recipes in each cookbook.
 
 The '-i' or '--install-cookbook' option will cause knife-audit to copy the knife_audit helper cookbook into the currently configured Chef cookbook_path.  If there is already a directory or file there with that name, it will abort.  Note that you will need to 'knife cookbook upload knife_audit' once you have done this in order to push the cookbook to your Chef server; in addition, you will need to add the knife_audit cookbook to your node runlists. See 'Helper Cookbook' below for more information.
 

@@ -51,6 +51,11 @@ module KnifeAudit
       :long => "--install-cookbook",
       :description => "Install knife_audit helper cookbook into current chef cookbook directory"
 
+    option :rec_split,
+      :short => "-r",
+      :long => "--recipe-split",
+      :description => "Split counts by Recipe"
+
     def run
 
       if @name_args.empty?
@@ -61,7 +66,7 @@ module KnifeAudit
 
       self.config = Chef::Config.merge!(config)
 
-      # If :install_cookbook flag is set, just install the cookbook and return (exit).
+      # if :install_cookbook flag is set, just install the cookbook and return (exit).
       if config[:install_cookbook]
 
         unless config[:cookbook_path]
@@ -101,11 +106,9 @@ module KnifeAudit
             exit 1
           end
         end
-
       end
 
-
-      # add count => 0 to each cookbook hash
+      # set-up count => 0 for each cookbooks and recipes
       cookbook_list.each do |name,book|
         book["count"] = 0
         book["seen_recipe_count"] = 0
@@ -113,16 +116,29 @@ module KnifeAudit
         book["seen_recipe_nodes"] = []
       end
 
+      if config[:rec_split]
+        @all_rec = rest.get_rest("cookbooks/_recipes")
+        @all_rec.map!{ |x| x.match(/::/) ? x : x << "::default"}.uniq
+        cookbook_list.each do |name,book|
+          this_recs = @all_rec.each.select{ |x| x =~ /#{name}::/ }
+          this_recs.each do |my_recipe|
+            rec = my_recipe.split('::')
+            book[rec[1]] = {}
+            book[rec[1]]["count"] = 0
+            book[rec[1]]["seen_recipe_count"] = 0
+            book[rec[1]]["nodes"] = []
+            book[rec[1]]["seen_recipe_nodes"] = []
+          end
+        end
+      end
 
       # 2) Get an array of Chef::Nodes known to the current server/org
-
-      query = "*:*"  # find all nodes
+      query = config[:environment] ? "chef_environment:#{config[:environment]}" : "*:*"
 
       Shell::Extensions.extend_context_object(self)
       node_list = nodes.find(query)
 
       # 3) Iterate over each node
-
       node_list.each do |node|
 
         # 3a) Get node's runlist
@@ -141,35 +157,65 @@ module KnifeAudit
           recipes = node.expand!.recipes.to_a
         end
 
-        node_cookbook_list = recipes.map{ |x| x.match(/[^\:]+/)[0] }.uniq
+        if config[:rec_split]
+	  node_cookbook_list = recipes.map{ |x| x.match(/::/) ? x : x << "::default"}.uniq
+        else
+          node_cookbook_list = recipes.map{ |x| x.match(/[^\:]+/)[0] }.uniq
+        end
 
         # 3b) For each cookbook in the node runlist, if it's in our cookbook array increment its count and
         #     add the node to its running node array
-
-        node_cookbook_list.each do |cookbook|
-	        if cookbook_list.has_key?(cookbook)
-            # Up the appropriate ookbook count and add node to appropriate nodes array
-            if node_seen_recipe_flag
-              cookbook_list[cookbook]["seen_recipe_count"] += 1
-              cookbook_list[cookbook]["seen_recipe_nodes"] << node.name
-            else
-              cookbook_list[cookbook]["count"] += 1
-              cookbook_list[cookbook]["nodes"] << node.name
+        if config[:rec_split]
+          node_cookbook_list.each do | my_rec |
+            cb_rec = my_rec.split('::')
+  	    if cookbook_list.has_key?(cb_rec[0])
+              # Up the appropriate cookbook count and add node to appropriate nodes array
+              if node_seen_recipe_flag
+                cookbook_list[cb_rec[0]][cb_rec[1]]["seen_recipe_count"] += 1
+                cookbook_list[cb_rec[0]][cb_rec[1]]["seen_recipe_nodes"] << node.name
+                cookbook_list[cb_rec[0]]["seen_recipe_nodes"] << node.name
+              else
+                cookbook_list[cb_rec[0]][cb_rec[1]]["count"] += 1
+                cookbook_list[cb_rec[0]][cb_rec[1]]["nodes"] << node.name
+                cookbook_list[cb_rec[0]]["nodes"] << node.name
+              end
             end
           end
+        else
+          node_cookbook_list.each do |cookbook|
+  	    if cookbook_list.has_key?(cookbook)
+              # Up the appropriate cookbook count and add node to appropriate nodes array
+              if node_seen_recipe_flag
+                cookbook_list[cookbook]["seen_recipe_count"] += 1
+                cookbook_list[cookbook]["seen_recipe_nodes"] << node.name
+              else
+                cookbook_list[cookbook]["count"] += 1
+                cookbook_list[cookbook]["nodes"] << node.name
+              end
+            end
+          end
+          node_seen_recipe_flag = false
         end
-      node_seen_recipe_flag = false
-
       end # step 3 iterate end
+
+      # Clean up any dupliates introduced because of multiple recipes from the same cookbook
+      cookbook_list.keys do |ckbk|
+        cookbook_list[ckbk]['nodes'].uniq!
+      end 
 
       # 4) Output
 
+      # output Set-up
+      @skip_these = %w{url versions count seen_recipe_count nodes seen_recipe_nodes}
+      if config[:rec_split]
+        @key_length = cookbook_list.empty? ? 0 : @all_rec.map {|name| name.size }.max + 4
+      else
+        @key_length = cookbook_list.empty? ? 0 : cookbook_list.keys.map {|name| name.size }.max + 2
+      end
+
       unless config[:totals]
         ui.msg("Cookbook audit from node runlists:")
-
-        format_cookbook_runlist_list_for_display(cookbook_list).each do |line|
-          ui.msg(line)
-        end
+        format_cookbook_runlist_list_for_display(cookbook_list)
       end
 
       if config[:all_cookbooks]
@@ -177,9 +223,7 @@ module KnifeAudit
 
         ui.msg("Cookbook audit from seen_recipes:")
 
-        format_cookbook_seenlist_list_for_display(cookbook_list).each do |line|
-          ui.msg(line)
-        end
+        format_cookbook_seenlist_list_for_display(cookbook_list)
       end
 
       if config[:totals]
@@ -187,62 +231,68 @@ module KnifeAudit
 
         ui.msg("Cookbook audit totals - runlist-only nodes + seen_recipes:")
 
-        format_cookbook_totallist_list_for_display(cookbook_list).each do |line|
-          ui.msg(line)
-        end
+        format_cookbook_totallist_list_for_display(cookbook_list)
       end
-
-
     end # 'run' def end
 
 
     def format_cookbook_runlist_list_for_display(item)
-      key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
-      if config[:show_nodelist]
-        item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["count"]} [ #{cookbook["nodes"].sort.join('  ')} ]"
-        end
-      else
-        item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["count"]}"
+      item.sort.map do |name, cookbook|
+        cookbook_count = cookbook["nodes"].count
+        ui.msg("#{name.ljust(@key_length)} #{cookbook['count']}")
+        ui.msg(wrapi("#{cookbook['nodes'].sort.join(' ')}",125, 4)) if config[:show_nodelist]
+        if config[:rec_split]
+          cookbook.map do | recipe, stats|
+            unless @skip_these.include?(recipe)
+              rec_name = "  #{name}::#{recipe}"
+              ui.msg("#{rec_name.ljust(@key_length)} #{cookbook[recipe]['count']}")
+              ui.msg(wrapi("#{cookbook[recipe]['nodes'].sort.join(' ')}",125, 4)) if config[:show_nodelist]
+            end
+          end
         end
       end
-
     end # format_cokbook_runlist... def end
 
     def format_cookbook_seenlist_list_for_display(item)
-      key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
-      if config[:show_nodelist]
-        item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["seen_recipe_count"]} [ #{cookbook["seen_recipe_nodes"].sort.join('  ')} ]"
-        end
-      else
-        item.sort.map do |name, cookbook|
-          "#{name.ljust(key_length)} #{cookbook["seen_recipe_count"]}"
+      item.sort.map do |name, cookbook|
+        cookbook_count = cookbook["seen_recipe_nodes"].count
+        ui.msg("#{name.ljust(@key_length)} #{cookbook['seen_recipe_count']}")
+        ui.msg(wrapi("#{cookbook['seen_recipe_nodes'].sort.join(' ')}",125, 4)) if config[:show_nodelist]
+        if config[:rec_split]
+          cookbook.map do | recipe, stats|
+            unless @skip_these.include?(recipe)
+              rec_name = "  #{name}::#{recipe}"
+              ui.msg("#{rec_name.ljust(@key_length)} #{cookbook[recipe]['seen_recipe_count']}")
+              ui.msg(wrapi("#{cookbook[recipe]['seen_recipe_nodes'].sort.join(' ')}",125, 4)) if config[:show_nodelist]
+            end
+          end
         end
       end
-
     end # format_cokbook_seenlist... def end
 
     def format_cookbook_totallist_list_for_display(item)
-      key_length = item.empty? ? 0 : item.keys.map {|name| name.size }.max + 2
-      if config[:show_nodelist]
-        item.sort.map do |name, cookbook|
-          cookbook_display = (cookbook["seen_recipe_nodes"] + cookbook["nodes"]).uniq
-          cookbook_count = cookbook["seen_recipe_count"] + cookbook["count"]
-          "#{name.ljust(key_length)} #{cookbook_count} [ #{cookbook_display.sort.join('  ')} ]"
-        end
-      else
-        item.sort.map do |name, cookbook|
-          cookbook_count = cookbook["seen_recipe_count"] + cookbook["count"]
-          "#{name.ljust(key_length)} #{cookbook_count}"
+      item.sort.map do |name, cookbook|
+        cookbook_display = (cookbook["seen_recipe_nodes"] + cookbook["nodes"]).uniq
+        cookbook_count = cookbook_display.count
+        ui.msg("#{name.ljust(@key_length)} #{cookbook_count}")
+        ui.msg(wrapi("#{cookbook_display.sort.join(' ')}",125, 4)) if config[:show_nodelist]
+        if config[:rec_split]
+          cookbook.map do | recipe, stats|
+            unless @skip_these.include?(recipe)
+              rec_name = "  #{name}::#{recipe}"
+              rec_count =  cookbook[recipe]['count'] + cookbook[recipe]['seen_recipe_count']
+              rec_display =  cookbook[recipe]['nodes'] + cookbook[recipe]['seen_recipe_nodes']
+              ui.msg("#{rec_name.ljust(@key_length)} #{rec_count}")
+              ui.msg(wrapi("#{rec_display.sort.join(' ')}",125, 4)) if config[:show_nodelist]
+            end
+          end
         end
       end
+    end # format_cokbook_totallist_list_for_display... def end
 
-    end # format_cokbook_seenlist... def end
-
-
-
+    def wrapi(s, width=78, ind=20)
+      sp=" " * ind
+      s.gsub!(/(.{1,#{width}})(\s+|\Z)/, sp + "\\1\n")
+    end
   end #class end
-
 end #module end
